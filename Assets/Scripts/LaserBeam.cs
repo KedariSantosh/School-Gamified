@@ -6,6 +6,7 @@ public class LaserBeam
     public GameObject laserObj;
     LineRenderer laser;
     List<Vector3> laserIndices = new List<Vector3>();
+    public GameObject hitObject;
 
     Dictionary<string, float> refractiveMaterials = new Dictionary<string, float>()
     {
@@ -13,7 +14,7 @@ public class LaserBeam
         {"Glass",1.5f }
     };
 
-    public LaserBeam(Vector3 pos,Vector3 dir,Material material,Transform parentTransform)
+    public LaserBeam(Vector3 pos, Vector3 dir, Material material, Transform parentTransform)
     {
         this.laser = new LineRenderer();
         this.laserObj = new GameObject();
@@ -23,31 +24,29 @@ public class LaserBeam
         this.dir = dir;
 
         this.laser = this.laserObj.AddComponent(typeof(LineRenderer)) as LineRenderer;
-        this.laser.startWidth = 0.1f;
-        this.laser.endWidth = 0.1f;
+        this.laser.startWidth = 0.01f;
+        this.laser.endWidth = 0.01f;
         this.laser.material = material;
         this.laser.startColor = Color.red;
-        this.laser.endColor = Color.red;
+        this.laser.endColor = Color.green;
 
-        CastRay(pos,dir,laser);
+        CastRay(pos, dir, laser);
     }
-    void CastRay(Vector3 pos,Vector3 dir,LineRenderer laser)
+    void CastRay(Vector3 pos, Vector3 dir, LineRenderer laser)
     {
         laserIndices.Add(pos);
 
-        Ray ray = new Ray(pos,dir);
+        Ray ray = new Ray(pos, dir);
         RaycastHit hit;
-        if(Physics.Raycast(ray,out hit,30,1))
+        if (Physics.Raycast(ray, out hit, 30, 1))
         {
-            CheckHit(hit,dir,laser);
+            CheckHit(hit, dir, laser);
         }
         else
         {
             laserIndices.Add(ray.GetPoint(30));
             UpdateLaser();
         }
-
-
     }
 
     void UpdateLaser()
@@ -62,16 +61,20 @@ public class LaserBeam
         }
     }
 
-    void CheckHit(RaycastHit hitInfo, Vector3 direction,LineRenderer laser)
+    void CheckHit(RaycastHit hitInfo, Vector3 direction, LineRenderer laser)
     {
-        if(hitInfo.collider.tag == "Mirror")
+        hitObject = hitInfo.collider.gameObject;
+        if (hitObject != null)
+        {
+            EventManager.Instance.TargetHit();
+        }
+        if (hitInfo.collider.tag == "Mirror")
         {
             Vector3 pos = hitInfo.point;
-            Vector3 dir = Vector3.Reflect(direction,hitInfo.normal);
-
-            CastRay(pos,dir,laser);
+            Vector3 dir = Vector3.Reflect(direction, hitInfo.normal);
+            CastRay(pos, dir, laser);
         }
-        else if(hitInfo.collider.tag == "Refract")
+        else if (hitInfo.collider.tag == "Refract")
         {
             Vector3 pos = hitInfo.point;
             laserIndices.Add(pos);
@@ -84,8 +87,8 @@ public class LaserBeam
             Vector3 norm = hitInfo.normal;
             Vector3 incident = direction;
 
-            Vector3 refractedVector = Refract(n1,n2,norm,incident);
-            
+            Vector3 refractedVector = Refract(n1, n2, norm, incident);
+
             //CastRay(newPos1, refractedVector,laser);
 
             Ray ray1 = new Ray(newPos1, refractedVector);
@@ -94,30 +97,27 @@ public class LaserBeam
             Ray ray2 = new Ray(newRayStartPos, -refractedVector);
             RaycastHit hit2;
 
-            if(Physics.Raycast(ray2, out hit2,1.6f,1))
+            if (Physics.Raycast(ray2, out hit2, 1.6f, 1))
             {
                 laserIndices.Add(hit2.point);
             }
 
             UpdateLaser();
 
-            Vector3 refractedVector2 = Refract(n2,n1,-hit2.normal,refractedVector);
+            Vector3 refractedVector2 = Refract(n2, n1, -hit2.normal, refractedVector);
 
             CastRay(hit2.point, refractedVector2, laser);
         }
         else
-        {
+        {           
             laserIndices.Add(hitInfo.point);
             UpdateLaser();
         }
     }
-
-    Vector3 Refract(float n1,float n2, Vector3 norm, Vector3 incident)
+    Vector3 Refract(float n1, float n2, Vector3 norm, Vector3 incident)
     {
         incident.Normalize();
-
-        Vector3 refractedVector = (n1/n2 * Vector3.Cross(norm,Vector3.Cross(-norm, incident)) - norm * Mathf.Sqrt(1-Vector3.Dot(Vector3.Cross(norm,incident) * (n1/n2 * n1/n2),Vector3.Cross(norm,incident)))).normalized;
+        Vector3 refractedVector = (n1 / n2 * Vector3.Cross(norm, Vector3.Cross(-norm, incident)) - norm * Mathf.Sqrt(1 - Vector3.Dot(Vector3.Cross(norm, incident) * (n1 / n2 * n1 / n2), Vector3.Cross(norm, incident)))).normalized;
         return refractedVector;
     }
-
 }

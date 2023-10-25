@@ -1,6 +1,4 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class EventManager : MonoBehaviour
@@ -8,19 +6,15 @@ public class EventManager : MonoBehaviour
     public static EventManager Instance { get; private set; }
     private void Awake() { Instance = this; }
 
-    public Action getName;
-
-    private void Start()
+    public Action TriggeredTargetAction;
+    public Action MissedTrigger;
+    public void TargetHit() 
     {
-        getName += SetName;
-    }
-    public void GetName()
-    {
-        getName.Invoke();
+        TriggeredTargetAction.Invoke();
     }
 
-    public void SetName()
+    public void MissTarget()
     {
-        print("hello what??");
-    }
+        MissedTrigger.Invoke();
+    }   
 }
